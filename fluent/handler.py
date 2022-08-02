@@ -37,7 +37,7 @@ class FluentRecordFormatter(logging.Formatter, object):
                  exclude_attrs=None):
         super(FluentRecordFormatter, self).__init__(None, datefmt)
 
-        if sys.version_info[0:2] >= (3, 2) and style != '%':
+        if sys.version_info[:2] >= (3, 2) and style != '%':
             self.__style, basic_fmt_dict = {
                 '{': (logging.StrFormatStyle, {
                     'sys_host': '{hostname}',
@@ -69,14 +69,13 @@ class FluentRecordFormatter(logging.Formatter, object):
                 self._fmt_dict = basic_fmt_dict
                 self._formatter = self._format_by_dict
                 self.usesTime = self._format_by_dict_uses_time
+            elif hasattr(fmt, "__call__"):
+                self._formatter = fmt
+                self.usesTime = fmt.usesTime
             else:
-                if hasattr(fmt, "__call__"):
-                    self._formatter = fmt
-                    self.usesTime = fmt.usesTime
-                else:
-                    self._fmt_dict = fmt
-                    self._formatter = self._format_by_dict
-                    self.usesTime = self._format_by_dict_uses_time
+                self._fmt_dict = fmt
+                self._formatter = self._format_by_dict
+                self.usesTime = self._format_by_dict_uses_time
 
         if format_json:
             self._format_msg = self._format_msg_json
@@ -134,11 +133,11 @@ class FluentRecordFormatter(logging.Formatter, object):
         return {'message': super(FluentRecordFormatter, self).format(record)}
 
     def _format_by_exclusion(self, record):
-        data = {}
-        for key, value in record.__dict__.items():
-            if key not in self._exc_attrs:
-                data[key] = value
-        return data
+        return {
+            key: value
+            for key, value in record.__dict__.items()
+            if key not in self._exc_attrs
+        }
 
     def _format_by_dict(self, record):
         data = {}
@@ -157,11 +156,8 @@ class FluentRecordFormatter(logging.Formatter, object):
         return data
 
     def _format_by_dict_uses_time(self):
-        if self.__style:
-            search = self.__style.asctime_search
-        else:
-            search = "%(asctime)"
-        return any([value.find(search) >= 0 for value in self._fmt_dict.values()])
+        search = self.__style.asctime_search if self.__style else "%(asctime)"
+        return any(value.find(search) >= 0 for value in self._fmt_dict.values())
 
     @staticmethod
     def _add_dic(data, dic):

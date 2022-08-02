@@ -51,12 +51,12 @@ class MockRecvServer(threading.Thread):
             try:
                 while True:
                     try:
-                        data = con.recv(16384)
-                        if not data:
+                        if data := con.recv(16384):
+                            self._buf.write(data)
+                        else:
                             break
-                        self._buf.write(data)
                     except socket.error as e:
-                        print("MockServer error: %s" % e)
+                        print(f"MockServer error: {e}")
                         break
             finally:
                 con.close()

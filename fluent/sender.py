@@ -121,10 +121,7 @@ class FluentSender(object):
             self.pendings = None
 
     def _make_packet(self, label, timestamp, data):
-        if label:
-            tag = '.'.join((self.tag, label))
-        else:
-            tag = self.tag
+        tag = '.'.join((self.tag, label)) if label else self.tag
         packet = (tag, timestamp, data)
         if self.verbose:
             print(packet)
@@ -132,9 +129,7 @@ class FluentSender(object):
 
     def _send(self, bytes_):
         with self.lock:
-            if self._closed:
-                return False
-            return self._send_internal(bytes_)
+            return False if self._closed else self._send_internal(bytes_)
 
     def _send_internal(self, bytes_):
         # buffering
@@ -194,26 +189,27 @@ class FluentSender(object):
         self._check_recv_side()
 
     def _reconnect(self):
-        if not self.socket:
-            try:
-                if self.host.startswith('unix://'):
-                    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                    sock.settimeout(self.timeout)
-                    sock.connect(self.host[len('unix://'):])
-                else:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.settimeout(self.timeout)
-                    # This might be controversial and may need to be removed
-                    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-                    sock.connect((self.host, self.port))
-            except Exception as e:
-                try:
-                    sock.close()
-                except Exception:  # pragma: no cover
-                    pass
-                raise e
+        if self.socket:
+            return
+        try:
+            if self.host.startswith('unix://'):
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                sock.settimeout(self.timeout)
+                sock.connect(self.host[len('unix://'):])
             else:
-                self.socket = sock
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(self.timeout)
+                # This might be controversial and may need to be removed
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                sock.connect((self.host, self.port))
+        except Exception as e:
+            try:
+                sock.close()
+            except Exception:  # pragma: no cover
+                pass
+            raise e
+        else:
+            self.socket = sock
 
     def _call_buffer_overflow_handler(self, pending_events):
         try:
@@ -225,13 +221,11 @@ class FluentSender(object):
 
     def _close(self):
         try:
-            sock = self.socket
-            if sock:
+            if sock := self.socket:
                 try:
-                    try:
-                        sock.shutdown(socket.SHUT_RDWR)
-                    except socket.error:  # pragma: no cover
-                        pass
+                    sock.shutdown(socket.SHUT_RDWR)
+                except socket.error:  # pragma: no cover
+                    pass
                 finally:
                     try:
                         sock.close()

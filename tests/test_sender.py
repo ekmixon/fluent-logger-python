@@ -296,7 +296,7 @@ class TestSender(unittest.TestCase):
         self.tearDown()
         tmp_dir = mkdtemp()
         try:
-            server_file = 'unix://' + tmp_dir + "/tmp.unix"
+            server_file = f'unix://{tmp_dir}/tmp.unix'
             self._server = mockserver.MockRecvServer(server_file)
             self._sender = fluent.sender.FluentSender(tag='test',
                                                       host=server_file)

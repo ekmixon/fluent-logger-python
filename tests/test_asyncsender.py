@@ -357,7 +357,7 @@ class TestSenderUnlimitedSize(unittest.TestCase):
 
             NUM = 1000
             for i in range(1, NUM + 1):
-                ok = sender.emit("foo{}".format(i), {'bar': "baz{}".format(i)})
+                ok = sender.emit(f"foo{i}", {'bar': f"baz{i}"})
                 self.assertTrue(ok)
 
         data = self.get_data()
@@ -372,5 +372,5 @@ class TestSenderUnlimitedSize(unittest.TestCase):
 
         el = data[NUM - 1]
         eq(3, len(el))
-        eq("test.foo{}".format(NUM), el[0])
-        eq({'bar': "baz{}".format(NUM)}, el[2])
+        eq(f"test.foo{NUM}", el[0])
+        eq({'bar': f"baz{NUM}"}, el[2])
